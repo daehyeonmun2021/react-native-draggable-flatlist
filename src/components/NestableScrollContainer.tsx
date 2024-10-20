@@ -1,7 +1,7 @@
 import React from "react";
-import { LayoutChangeEvent, ScrollViewProps } from "react-native";
+import { LayoutChangeEvent, NativeScrollEvent, NativeSyntheticEvent, ScrollViewProps } from "react-native";
 import { ScrollView } from "react-native-gesture-handler";
-import Animated, { useAnimatedScrollHandler } from "react-native-reanimated";
+import Animated, { runOnUI } from "react-native-reanimated";
 import {
   NestableScrollContainerProvider,
   useSafeNestableScrollContainerContext,
@@ -19,12 +19,6 @@ function NestableScrollContainerInner(props: ScrollViewProps) {
     outerScrollEnabled,
   } = useSafeNestableScrollContainerContext();
 
-  const onScroll = useAnimatedScrollHandler({
-    onScroll: ({ contentOffset }) => {
-      outerScrollOffset.value = contentOffset.y;
-    },
-  });
-
   const onLayout = useStableCallback((event: LayoutChangeEvent) => {
     const {
       nativeEvent: { layout },
@@ -37,6 +31,13 @@ function NestableScrollContainerInner(props: ScrollViewProps) {
     props.onContentSizeChange?.(w, h);
   });
 
+  const handleScroll = useStableCallback((e:NativeSyntheticEvent<NativeScrollEvent>) => {
+    props.onScroll?.(e);
+    runOnUI((offsetY:number) => {
+      outerScrollOffset.value = offsetY;
+    })(e.nativeEvent.contentOffset.y);
+  })
+
   return (
     <AnimatedScrollView
       {...props}
@@ -45,7 +46,7 @@ function NestableScrollContainerInner(props: ScrollViewProps) {
       scrollEnabled={outerScrollEnabled}
       ref={scrollableRef}
       scrollEventThrottle={1}
-      onScroll={onScroll}
+      onScroll={handleScroll}
     />
   );
 }
